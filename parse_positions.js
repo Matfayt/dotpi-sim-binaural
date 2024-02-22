@@ -22,11 +22,9 @@ function getRandomReverberance(min, max) {
   return Math.random() * (max - min) + min;
 }
 
-// 0 - 100 10-15000
-
 // set filter values
 filterMasterT10 = 0.0; // dB
-filterLowT10 = -15.0; // dB /less lowF for small speakers?
+filterLowT10 = 0.0; // dB /less lowF for small speakers?
 filterMediumT10 = 0.0; // dB
 filterHighT10 = 0.0; // dB
 flT10 = 177.0; // Hz /spat default
@@ -56,20 +54,67 @@ function getRandomYaw(min, max) {
   return Math.random() * (max - min) + min;
 }
 
+//Sources positions from spaces selection functions 
+function parseEspro(dict) {
+    Object.keys(dict).forEach((name, index) => {
+        // Max.post(`${Object.keys(dict).length} sources where parsed`);
+        // Max.post(dict[name].position.x);
+        Max.outlet(`/source/${index+1}/xy`, dict[name].position.x-3.5, 4-dict[name].position.y); // -3.5 and 4 to set hp arround 0 and (4)- to set first hp in upper left corner
+        Max.outlet(`/source/${index+1}/room/destination`, 1); 
+    })
+}
+
+function parseStudio5(dict) {
+    Object.keys(dict).forEach((name, index) => {
+        // Max.post(dict[name].position.x);
+        Max.outlet(`/source/${index+1}/xy`, (dict[name].position.x - 3.5) * 0.5, 0.5 * (4 - dict[name].position.y)); // -3.5 and 4 to set hp arround 0 and (4)- to set first hp in upper left corner 
+        Max.outlet(`/source/${index+1}/room/destination`, 2);
+    }) 
+}
+
+function parseRandom(dict) {
+    Max.outlet(`/room/3/mute`, 1); //mute while brutaly moving parameters so you don't hear terrible noises
+    const randomRev = getRandomReverberance(0.0, 100.0);
+    const randomSize = getRandomRoomSize(10.0, 15000.0);
+    Max.outlet(`/room/3/reverb/roomsize`, randomSize); // ~A room in m^3 for random room
+    Max.outlet(`/room/3/reverberance`, randomRev); // ~A random reverb for random room
+    Object.keys(dict).forEach((name, index) => {
+        const randomPosFactor = getRandomPositionFactor(0.5, 2.0);
+        Max.outlet(`/source/${index+1}/xy`, (dict[name].position.x - 3.5) * randomPosFactor, randomPosFactor * (4 - dict[name].position.y)); // -3.5 and 4 to set hp arround 0 and (4)- to set first hp in upper left corner
+        Max.outlet(`/source/${index+1}/room/destination`, 3);
+    }) 
+    Max.outlet(`/room/3/mute`, 0); //unmute to hear sound
+} 
+
+//Source orientation from Yaw selection function
+function setRandomYaw(dict) {
+    Object.keys(dict).forEach((name, index) => {
+        const randYaw = getRandomYaw(-180, 180);
+        // Max.post(dict[name].position.x);
+        Max.outlet(`/source/${index+1}/yaw`, randYaw);
+    }) 
+}
+
+function setCenteredOrientedYaw(dict) {
+    Object.keys(dict).forEach((name, index) => {
+        // Max.post(dict[name].position.x);
+        Max.outlet(`/source/${index+1}/yaw`, 0);
+
+    })
+}
+
 // Use the 'outlet' function to send messages out of node.script's outlet
 Max.addHandler("dict", (dict) => {
     Max.post(`${Object.keys(dict).length} sources where parsed`);
+    //set default values, names and filters
     Object.keys(dict).forEach((name, index) => {
         // Max.post(dict[name].position.x);
         Max.outlet(`/source/${index+1}/xy`, dict[name].position.x-3.5, 4-dict[name].position.y); // -3.5 and 4 to set hp arround 0 and (4)- to set first hp in upper left corner
         Max.outlet(`/source/${index+1}/name`, name); 
         Max.outlet(`/source/${index+1}/vumeter/visible`, 1);
-        // Max.outlet(`/source/${index+1}/type`, dict[name].audioOutputType);
-        // Max.post(dict[name].audioOutputType);
-        // Max.outlet(`/source/${index+1}/`)
+
         // parse speakers type for Spat filter
         if (dict[name].audioOutputType === "CRS") {
-            // Max.post(`outputtype${index+1}is`, dict[name].audioOutputType);
             Max.outlet(`/source/${index+1}/axis/params`,filterMasterT10, filterLowT10, filterMediumT10, filterHighT10, flT10, fhT10,);
             Max.outlet(`/source/${index+1}/color`, 1, 1, 0, 1);
 
@@ -83,66 +128,21 @@ Max.addHandler("dict", (dict) => {
         };
     });
 
-    Max.addHandler("espro", () => {
-        Max.post(`${Object.keys(dict).length} sources where parsed`);
-        Object.keys(dict).forEach((name, index) => {
-            const randomPos = getRandomPositionFactor(0.5, 2.0);
-            Max.post(randomPos);
-            // Max.post(dict[name].position.x);
-            Max.outlet(`/source/${index+1}/xy`, dict[name].position.x-3.5, 4-dict[name].position.y); // -3.5 and 4 to set hp arround 0 and (4)- to set first hp in upper left corner
-            Max.outlet(`/source/${index+1}/room/destination`, 1); 
-        }) 
-
+    //receives messages from max users and call functions
+    Max.addHandlers({
+      [Max.MESSAGE_TYPES.DICT]: (dict) => getDict(dict),
+      //spaces functions calls
+      espro: () => parseEspro(dict),
+      studio5: () => parseStudio5(dict),
+      random: () => parseRandom(dict),
+      //yaw functions calls
+      random_yaw: () => setRandomYaw(dict),
+      center_oriented_yaw: () => setCenteredOrientedYaw(dict),
     });
-
-    Max.addHandler("studio5", () => {
-        Max.post(`${Object.keys(dict).length} sources where parsed`);
-        Object.keys(dict).forEach((name, index) => {
-            // Max.post(dict[name].position.x);
-            Max.outlet(`/source/${index+1}/xy`, (dict[name].position.x - 3.5) * 0.5, 0.5 * (4 - dict[name].position.y)); // -3.5 and 4 to set hp arround 0 and (4)- to set first hp in upper left corner 
-            Max.outlet(`/source/${index+1}/room/destination`, 2);
-        }) 
-
-    });
-
-    Max.addHandler("random", () => {
-        Max.outlet(`/room/3/mute`, 1); //mute while brutaly moving parameters so you don't hear terrible noises
-        const randomRev = getRandomReverberance(0.0, 100.0);
-        const randomSize = getRandomRoomSize(10.0, 15000.0);
-        Max.outlet(`/room/3/reverb/roomsize`, randomSize); // ~A room in m^3 for random room
-        Max.outlet(`/room/3/reverberance`, randomRev); // ~A random reverb for random room
-        Max.post(`${Object.keys(dict).length} sources where parsed`);
-
-        Object.keys(dict).forEach((name, index) => {
-            const randomPosFactor = getRandomPositionFactor(0.5, 2.0);
-            Max.outlet(`/source/${index+1}/xy`, (dict[name].position.x - 3.5) * randomPosFactor, randomPosFactor * (4 - dict[name].position.y)); // -3.5 and 4 to set hp arround 0 and (4)- to set first hp in upper left corner
-            Max.outlet(`/source/${index+1}/room/destination`, 3);
-        }) 
-        Max.outlet(`/room/3/mute`, 0); //unmute to hear sound
-
-
-    });
-
-    Max.addHandler("random_yaw", () => {
-        Max.post(`${Object.keys(dict).length} sources where parsed`);
-        Object.keys(dict).forEach((name, index) => {
-            const randYaw = getRandomYaw(-180, 180);
-            // Max.post(dict[name].position.x);
-            Max.outlet(`/source/${index+1}/yaw`, randYaw);
-        }) 
-
-    });
-
-    Max.addHandler("center_oriented_yaw", () => {
-        Max.post(`${Object.keys(dict).length} sources where parsed`);
-        Object.keys(dict).forEach((name, index) => {
-            // Max.post(dict[name].position.x);
-            Max.outlet(`/source/${index+1}/yaw`, 0);
-        }) 
 
 });
 
-});
+
 
 
 
