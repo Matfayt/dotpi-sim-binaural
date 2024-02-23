@@ -301,7 +301,7 @@
 					"maxclass" : "comment",
 					"numinlets" : 1,
 					"numoutlets" : 0,
-					"patching_rect" : [ 413.0, 99.0, 192.0, 24.0 ],
+					"patching_rect" : [ 226.0, 96.0, 192.0, 24.0 ],
 					"text" : "Monitor input multichannel gain",
 					"textjustification" : 1
 				}
@@ -359,14 +359,15 @@
 			}
 , 			{
 				"box" : 				{
+					"channels" : 32,
 					"id" : "obj-8",
-					"lastchannelcount" : 64,
+					"lastchannelcount" : 32,
 					"maxclass" : "mc.live.gain~",
 					"numinlets" : 1,
 					"numoutlets" : 4,
 					"outlettype" : [ "multichannelsignal", "", "float", "list" ],
 					"parameter_enable" : 1,
-					"patching_rect" : [ 3.0, 37.0, 408.0, 148.0 ],
+					"patching_rect" : [ 3.0, 37.0, 222.0, 142.0 ],
 					"saved_attribute_attributes" : 					{
 						"valueof" : 						{
 							"parameter_longname" : "mc.live.gain~",
@@ -640,6 +641,8 @@
 					"saved_object_attributes" : 					{
 						"autostart" : 1,
 						"defer" : 0,
+						"node_bin_path" : "",
+						"npm_bin_path" : "",
 						"watch" : 1
 					}
 ,
